@@ -10,6 +10,8 @@ import logging
 import requests
 import click
 
+eventlet.sleep(3)
+
 logging.basicConfig(format=('%(asctime)s %(levelname)s %(message)s'), level=logging.DEBUG)
 
 @click.command()
