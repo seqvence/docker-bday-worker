@@ -39,7 +39,7 @@ def docker_worker(submissions, interval):
                 pool.spawn(check_submission)
             logging.info('Waiting for {} seconds'.format(interval))
             eventlet.sleep(interval)
-        except (SystemExit, KeyboardInterrupt, ):
+        except (SystemExit, KeyboardInterrupt):
             break
         if killer.kill_now:
             break
