@@ -96,8 +96,7 @@ class dbDriver():
                             {
                                 "$set": {
                                     "status": status
-                                },
-                                "$currentDate": {"lastModified": True}
+                                }
                             })
 
     def disconnect(self):
