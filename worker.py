@@ -9,16 +9,29 @@ from docker import Client
 import logging
 import requests
 import click
+import signal
 
 eventlet.sleep(3)
 
 logging.basicConfig(format=('%(asctime)s %(levelname)s %(message)s'), level=logging.DEBUG)
 
+
+class GracefulKiller:
+    kill_now = False
+
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self,signum, frame):
+        self.kill_now = True
+
 @click.command()
 @click.option('--submissions', default=5, help='Number of submissions to be processed per interval (Default: 5)')
-@click.option('--interval', default=30, help='Interval used to process new submissions Default: 30)')
+@click.option('--interval', default=10, help='Interval used to process new submissions Default: 30)')
 def docker_worker(submissions, interval):
     pool = eventlet.GreenPool(size=100)
+    killer = GracefulKiller()
 
     while True:
         try:
@@ -26,7 +39,9 @@ def docker_worker(submissions, interval):
                 pool.spawn(check_submission)
             logging.info('Waiting for {} seconds'.format(interval))
             eventlet.sleep(interval)
-        except (SystemExit, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt, ):
+            break
+        if killer.kill_now:
             break
 
 
