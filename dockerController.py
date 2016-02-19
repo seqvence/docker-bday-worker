@@ -40,52 +40,76 @@ class DockerController:
             try:
                 logging.info(json.loads(download_log[-1])['status'])
                 return True
-            except Exception:
-                logging.error(json.loads(download_log[-1])['error'])
+            except Exception, e:
+                logging.info(json.loads(download_log[-1])['error'])
                 return False
         else:
-            logging.warn("Image {} not found.".format(image_name))
+            logging.info("Image {} not found.".format(image_name))
             return False
 
     @staticmethod
-    def test_endpoint(ip, port):
-        logging.info('Testing endpoint {}:{}'.format(ip, port))
+    def test_endpoint(ip, port, path):
+        """
+        Connect to an endpoint using http
+        :param ip: string
+        :param port: string
+        :return: boolean
+        """
+        logging.info('Testing endpoint {}:{}{}'.format(ip, port, path))
         try:
-            r = requests.get('http://{}:{}'.format(ip, port), timeout=3)
+            r = requests.get('http://{}:{}{}'.format(ip, port, path), timeout=3)
         except requests.exceptions.Timeout:
-            logging.error('Timeout connecting to {}:{}'.format(ip, port))
+            logging.error('Timeout connecting to {}:{}{}'.format(ip, port, path))
             return False
         except Exception, e:
             logging.error(e)
             return False
         if r.status_code == 200:
-            logging.info('{}:{} passed validation'.format(ip, port))
+            logging.info('{}:{}{} passed validation'.format(ip, port, path))
             return True
         else:
-            logging.info('{}:{} failed validation'.format(ip, port))
+            logging.info('{}:{}{} failed validation'.format(ip, port, path))
             return False
 
     def run_container(self, image_name):
+        """
+        Run container and return its ID and IP Address
+        :param image_name: string
+        :return: string, string
+        """
         logging.info("Connecting to Docker daemon")
-        container = self.cli.create_container(image=image_name, ports=[80])
+        build_container = self.cli.create_container(image=image_name, ports=[80])
         networks = self.cli.networks(names=['compose_default'])
-        self.cli.connect_container_to_network(container=container.get('Id'), net_id=networks[0]['Id'])
-        self.cli.start(container=container.get('Id'))
-        container = self.cli.inspect_container(container=container.get('Id'))
-        if container['State']['Status'] != 'running':
+        self.cli.connect_container_to_network(container=build_container.get('Id'), net_id=networks[0]['Id'])
+        self.cli.start(container=build_container.get('Id'))
+
+        running_container = self.cli.inspect_container(container=build_container.get('Id'))
+
+        if running_container['State']['Status'] != 'running':
             logging.error('Container {} died too soon.'.format(image_name))
             return
-        if not container['NetworkSettings']['IPAddress']:
+
+        if not running_container['NetworkSettings']['IPAddress']:
             logging.error('Container {} has no network. Something went wrong'.format(image_name))
             return
-        test_result = self.test_endpoint(container['NetworkSettings']['Networks']['compose_default']['IPAddress'], 80)
+
+        return build_container.get('Id'), running_container['NetworkSettings']['Networks']['compose_default']['IPAddress']
+
+    def clean_container(self, container_id, image_name):
+        """
+        Stop and remove container, remove image
+        :param running_container: dict
+        :param image_name: string
+        :return: None
+        """
+        logging.info('Time to do the clean up')
         logging.info('Stoping container {}'.format(image_name))
-        self.cli.stop(container=container.get('Id'), timeout=20)
+        self.cli.stop(container=container_id, timeout=20)
         logging.info('Removing container {}'.format(image_name))
-        self.cli.remove_container(container=container.get('Id'))
+        self.cli.remove_container(container=container_id)
         logging.info("Removing image {}".format(image_name))
         self.cli.remove_image(image=image_name, force=True)
-        return test_result
+        return
 
 
 def main(image_name):
@@ -95,7 +119,7 @@ def main(image_name):
 
 
 if __name__ == '__main__':
-    main("appcontainers/apache:ubuntu_14.04")
+    # main("appcontainers/apache:ubuntu_14.04")
     # main("appcontainers/apache:ubuntu_14.04")
     # main("pierrezemb/gostatic")
     pass

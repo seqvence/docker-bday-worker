@@ -3,9 +3,8 @@ import eventlet
 eventlet.monkey_patch()  # NOQA
 
 import app_config as config
-from dbController import dbDriver
+from dbController import DbDriver
 from dockerController import DockerController
-
 import logging
 import click
 import signal
@@ -45,25 +44,33 @@ def docker_worker(submissions, interval):
 
 
 def check_submission():
-    mongo = dbDriver(config.database)
+    mongo = DbDriver(config.database)
     docker = DockerController(config.docker['api'])
-    record = mongo.getOneRecord()
+    record = mongo.get_one_record()
+
     if not record:
         logging.info("Quiting. No new submission.")
         return
+
     for image in record['repo']:
         logging.info("Downloading image {} for user {}".format(image, record['name']))
-        docker.download_image(image_name=image)
-        logging.info('Starting container {} for user {}'.format(image, record['name']))
-        test_result = docker.run_container(image)
-        if test_result:
+        if not docker.download_image(image_name=image):
             break
 
-    logging.info('Updating submission status for {}'.format(record['name']))
-    if test_result:
-        mongo.update_record_status(record['_id'], 'successful')
-    else:
-        mongo.update_record_status(record['_id'], 'failed')
+        logging.info('Starting container {} for user {}'.format(image, record['name']))
+        container_id, container_ip = docker.run_container(image)
+
+        test_result = docker.test_endpoint(container_ip, config.container['api_port'], config.container['api_path'])
+        docker.clean_container(container_id, image)
+
+        if test_result:
+            logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
+            mongo.update_record_status(record['_id'], 'successful')
+            break
+
+    logging.info('Submission FAILED for {}'.format(record['name']))
+    mongo.update_record_status(record['_id'], 'failed')
+
 
 if __name__ == '__main__':
     docker_worker()
