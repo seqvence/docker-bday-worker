@@ -31,14 +31,18 @@ class DockerController:
 
         if len(results) > 0:
             logging.info("Downloading image {}".format(image_name))
-            action = self.cli.pull(image_name, stream=True, insecure_registry=False)
-
+            download_log = list(self.cli.pull(image_name, stream=True, insecure_registry=False))
             # Extracting the last line from the output
             # Possible outcome:
             # Status: Downloaded newer image for pierrezemb/gostatic
             # Status: Image is up to date for pierrezemb/gostatic
-            logging.info(json.loads(list(action)[-1])['status'])
-            return True
+            # Error: Tag
+            try:
+                logging.info(json.loads(download_log[-1])['status'])
+                return True
+            except Exception:
+                logging.error(json.loads(download_log[-1])['error'])
+                return False
         else:
             logging.warn("Image {} not found.".format(image_name))
             return False
@@ -86,12 +90,12 @@ class DockerController:
 
 def main(image_name):
     client = DockerController("tcp://192.168.64.2:2375")
-    client.run_container(image_name)
     if client.download_image(image_name):
         client.run_container(image_name)
 
 
 if __name__ == '__main__':
+    main("appcontainers/apache:ubuntu_14.04")
     # main("appcontainers/apache:ubuntu_14.04")
     # main("pierrezemb/gostatic")
     pass

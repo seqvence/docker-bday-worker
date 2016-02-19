@@ -52,7 +52,7 @@ def check_submission():
         logging.info("Quiting. No new submission.")
         return
     for image in record['repo']:
-        logging.info("Downloading image {} for user {}".format(image), record['name'])
+        logging.info("Downloading image {} for user {}".format(image, record['name']))
         docker.download_image(image_name=image)
         logging.info('Starting container {} for user {}'.format(image, record['name']))
         test_result = docker.run_container(image)
