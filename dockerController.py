@@ -7,13 +7,12 @@ from docker import Client
 status = ["Downloading", "Image missing", "Configuring image",
           "Running image", "Testing endpoint", "Failed", "Successful"]
 
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
 
 class DockerController:
     def __init__(self, docker_endpoint):
         self.cli = Client(docker_endpoint)
-        pass
 
     def download_image(self, image_name):
         """
@@ -64,8 +63,6 @@ class DockerController:
 
     def run_container(self, image_name):
         logging.info("Connecting to Docker daemon")
-        # for line in cli.pull(image_name, stream=True):
-        #    logging.info((json.dumps(json.loads(line), indent=4)))
         container = self.cli.create_container(image=image_name, ports=[80])
         networks = self.cli.networks(names=['compose_default'])
         self.cli.connect_container_to_network(container=container.get('Id'), net_id=networks[0]['Id'])
@@ -82,18 +79,19 @@ class DockerController:
         self.cli.stop(container=container.get('Id'), timeout=20)
         logging.info('Removing container {}'.format(image_name))
         self.cli.remove_container(container=container.get('Id'))
+        logging.info("Removing image {}".format(image_name))
+        self.cli.remove_image(image=image_name, force=True)
         return test_result
 
 
 def main(image_name):
     client = DockerController("tcp://192.168.64.2:2375")
-    # client.run_container(image_name)
+    client.run_container(image_name)
     if client.download_image(image_name):
-        container_id = client.run_container(image_name)
-        #client.test_container(image_name)
-        logging.info(container_id)
+        client.run_container(image_name)
 
 
 if __name__ == '__main__':
-    main("eboraas/apache:latest")
-    main("pierrezemb/gostatic")
+    # main("appcontainers/apache:ubuntu_14.04")
+    # main("pierrezemb/gostatic")
+    pass
