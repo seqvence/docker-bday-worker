@@ -109,8 +109,8 @@ class DbDriver():
 
         self.cHandle.update({"_id": object_id},
                             {
-                                "$addToSet": {
-                                    "coordinates": {"lat": lat, "long": lng}
+                                "$set": {
+                                    "coordinates": {"lat": lat, "lng": lng}
                                 }
                             })
         return
