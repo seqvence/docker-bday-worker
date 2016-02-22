@@ -90,19 +90,21 @@ class DbDriver():
         """
         return dumps(self.cHandle.find())
 
-    def update_record_status(self, object_id, status):
+    def update_record_status(self, object_id, status, statusmsg=None):
         """
         Update status for a submission record
         :param object_id: Object(object_id)
         :param status: string
         :return: None
         """
-        self.cHandle.update({"_id": object_id},
-                            {
-                                "$set": {
-                                    "status": status
-                                }
-                            })
+        update_struct = {
+                            "$set": {
+                                "status": status
+                            }
+                        }
+        if statusmsg:
+            update_struct['$set']['statusmsg'] = statusmsg
+        self.cHandle.update({"_id": object_id}, update_struct)
         return
 
     def update_record_location(self, object_id, lat, lng):

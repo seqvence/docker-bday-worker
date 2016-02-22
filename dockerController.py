@@ -2,12 +2,16 @@ import json
 import logging
 
 import requests
-from docker import Client
+from docker import Client, errors
 
 status = ["Downloading", "Image missing", "Configuring image",
           "Running image", "Testing endpoint", "Failed", "Successful"]
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+
+
+class ContainerError(Exception):
+    pass
 
 
 class DockerController:
@@ -78,7 +82,11 @@ class DockerController:
         :return: string, string
         """
         logging.info("Connecting to Docker daemon")
-        build_container = self.cli.create_container(image=image_name, ports=[80])
+        try:
+            build_container = self.cli.create_container(image=image_name, ports=[80])
+        except errors.APIError:
+            raise ContainerError('Could not create container for image {}'.format(image_name))
+
         networks = self.cli.networks(names=['compose_default'])
         self.cli.connect_container_to_network(container=build_container.get('Id'), net_id=networks[0]['Id'])
         self.cli.start(container=build_container.get('Id'))

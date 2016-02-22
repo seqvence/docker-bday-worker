@@ -4,7 +4,7 @@ eventlet.monkey_patch()  # NOQA
 
 import app_config as config
 from dbController import DbDriver
-from dockerController import DockerController
+from dockerController import DockerController, ContainerError
 import logging
 import click
 import signal
@@ -69,20 +69,25 @@ def check_submission():
     if coordinates:
         mongo.update_record_location(record['_id'], coordinates.latitude, coordinates.longitude)
     else:
-        mongo.update_record_status(record['_id'], 'failed')
+        mongo.update_record_status(record['_id'], 'failed',
+                                   statusmsg='Failed to geo-locate {}'.format(record['location']))
         return
 
     for image in record['repo']:
         logging.info("Downloading image {} for user {}".format(image, record['name']))
         if image == "bogus_bday_image:latest":
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
-            mongo.update_record_status(record['_id'], 'successful')
+            mongo.update_record_status(record['_id'], 'successful', statusmsg='Magic image passed validation')
             return
         if not docker.download_image(image_name=image):
             break
 
         logging.info('Starting container {} for user {}'.format(image, record['name']))
-        container_id, container_ip = docker.run_container(image)
+        try:
+            container_id, container_ip = docker.run_container(image)
+        except ContainerError, e:
+            mongo.update_record_status(record['_id'], 'failed', statusmsg=str(e))
+            return
 
         eventlet.sleep(2)
         test_result = docker.test_endpoint(container_ip, config.container['api_port'], config.container['api_path'])
@@ -90,11 +95,12 @@ def check_submission():
 
         if test_result:
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
-            mongo.update_record_status(record['_id'], 'successful')
+            mongo.update_record_status(record['_id'], 'successful',
+                                       statusmsg='Validation passed with image {}'.format(image))
             return
 
     logging.info('Submission FAILED for {}'.format(record['name']))
-    mongo.update_record_status(record['_id'], 'failed')
+    mongo.update_record_status(record['_id'], 'failed', statusmsg='None of the provided images passed the validation')
 
 
 if __name__ == '__main__':
