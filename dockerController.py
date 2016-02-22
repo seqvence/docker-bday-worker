@@ -95,7 +95,7 @@ class DockerController:
 
         return build_container.get('Id'), running_container['NetworkSettings']['Networks']['compose_default']['IPAddress']
 
-    def clean_container(self, container_id, image_name):
+    def clean_container(self, container_id, image_name=None):
         """
         Stop and remove container, remove image
         :param running_container: dict
@@ -107,9 +107,9 @@ class DockerController:
         self.cli.stop(container=container_id, timeout=20)
         logging.info('Removing container {}'.format(image_name))
         self.cli.remove_container(container=container_id)
-        if image_name != ""
-        logging.info("Removing image {}".format(image_name))
-        self.cli.remove_image(image=image_name, force=True)
+        if image_name:
+            logging.info("Removing image {}".format(image_name))
+            self.cli.remove_image(image=image_name, force=True)
         return
 
 

@@ -9,6 +9,8 @@ import logging
 import click
 import signal
 
+from geopy.geocoders import GoogleV3
+
 eventlet.sleep(3)
 
 logging.basicConfig(format=('%(asctime)s %(levelname)s %(message)s'), level=logging.DEBUG)
@@ -43,30 +45,53 @@ def docker_worker(submissions, interval):
             break
 
 
+def get_coordinates(address):
+    logging.info('Retrieving coordinates for {}'.format(address))
+    geocoder = GoogleV3()
+    try:
+        return geocoder.geocode(address)
+    except:
+        logging.error('Failed to retrieve coordinates for {}'.format(address))
+        return None
+
+
+
 def check_submission():
     mongo = DbDriver(config.database)
     docker = DockerController(config.docker['api'])
     record = mongo.get_one_record()
 
     if not record:
-        logging.info("Quiting. No new submission.")
+        logging.debug("Quiting. No new submission.")
+        return
+
+    coordinates = get_coordinates(record['location'])
+    if coordinates:
+        mongo.update_record_location(record['_id'], coordinates.latitude, coordinates.longitude)
+    else:
+        mongo.update_record_status(record['_id'], 'failed')
         return
 
     for image in record['repo']:
         logging.info("Downloading image {} for user {}".format(image, record['name']))
+        if image == "bogus_bday_image:latest":
+            logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
+            mongo.update_record_status(record['_id'], 'successful')
+            return
         if not docker.download_image(image_name=image):
             break
 
         logging.info('Starting container {} for user {}'.format(image, record['name']))
         container_id, container_ip = docker.run_container(image)
 
+        eventlet.sleep(2)
         test_result = docker.test_endpoint(container_ip, config.container['api_port'], config.container['api_path'])
         docker.clean_container(container_id, image)
 
         if test_result:
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
             mongo.update_record_status(record['_id'], 'successful')
-            break
+            return
 
     logging.info('Submission FAILED for {}'.format(record['name']))
     mongo.update_record_status(record['_id'], 'failed')

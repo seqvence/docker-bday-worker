@@ -105,6 +105,16 @@ class DbDriver():
                             })
         return
 
+    def update_record_location(self, object_id, lat, lng):
+
+        self.cHandle.update({"_id": object_id},
+                            {
+                                "$addToSet": {
+                                    "coordinates": {"lat": lat, "long": lng}
+                                }
+                            })
+        return
+
     def disconnect(self):
         """
         Disconnect from DB
