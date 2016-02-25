@@ -57,7 +57,7 @@ def get_coordinates(address):
 
 
 def check_submission():
-    mongo = DbDriver(config.database)
+    mongo = DbDriver(config)
     docker = DockerController(config.docker['api'])
     record = mongo.get_one_record()
 

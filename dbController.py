@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import sys
+import urllib
 
 import bson
 from bson.json_util import dumps
@@ -19,9 +20,11 @@ class DbDriver():
         Connects to Database(s)
         :return:
         """
-        self.dbParam = config
+        self.dbParam = config.database
         self.connect()
         self.post = dict()
+        self.twitter_link = config.twitter['tweet_link']
+        self.twitter_message = urllib.quote(config.twitter['tweet_message'])
         #self.cHandle = object
         #self.dbHandle = object
 
@@ -81,7 +84,8 @@ class DbDriver():
         Retrieve one record with status "submitted" and updates the status to "pending"
         :return: dict
         """
-        return self.cHandle.find_one_and_update({'status': 'submitted'}, {'$set': {'status': 'pending'}}, return_document=ReturnDocument.AFTER)
+        return self.cHandle.find_one_and_update({'status': 'submitted'}, {'$set': {'status': 'pending'}},
+                                                return_document=ReturnDocument.AFTER)
 
     def get_all_records(self):
         """
@@ -93,6 +97,7 @@ class DbDriver():
     def update_record_status(self, object_id, status, statusmsg=None):
         """
         Update status for a submission record
+        :param statusmsg: string
         :param object_id: Object(object_id)
         :param status: string
         :return: None
@@ -104,6 +109,9 @@ class DbDriver():
                         }
         if statusmsg:
             update_struct['$set']['statusmsg'] = statusmsg
+        if status == "successful" and self.has_twitter(object_id):
+            update_struct['$set']['tweetmsg'] = self.twitter_link + self.twitter_message
+
         self.cHandle.update({"_id": object_id}, update_struct)
         return
 
@@ -116,6 +124,22 @@ class DbDriver():
                                 }
                             })
         return
+
+    def has_twitter(self, object_id):
+        """
+        Check if submission has Twitter handler
+        :param object_id: objectId
+        :return: boolean
+        """
+        return "twitter" in self.cHandle.find_one({"_id": ObjectId(object_id)})
+
+    def get_twitter(self, object_id):
+        """
+        Retrieve Twitter handler
+        :param object_id: objectId
+        :return: string
+        """
+        return self.cHandle.find_one({"_id": ObjectId(object_id)}, {"_id": False, "twitter": True})['twitter']
 
     def disconnect(self):
         """
@@ -141,10 +165,12 @@ class DbDriver():
 
 
 def main():
-    a = DbDriver()
-    for i in range(1):
-        subID = a.insert_record('{"a": "a"}')
-        logging.info(a.retrieve_record(subID))
+    import app_config as config2
+    a = DbDriver(config2)
+    # for i in range(1):
+    #     subID = a.insert_record('{"a": "a"}')
+    #     logging.info(a.retrieve_record(subID))
+    print a.update_record_status(ObjectId('56ce3b9b200b7e211a45c8f3'), status="successful")
     a.disconnect()
 
 if __name__ == '__main__':
