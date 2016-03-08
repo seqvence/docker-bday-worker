@@ -118,8 +118,8 @@ class DbDriver():
 
     def update_record_location(self, object_id, lat, lng):
         if self.cHandle.find_one({"coordinates": {"lat": lat, "lng": lng}}):
-            lat *= random.uniform(0.000001, 1.000001) * 0.000002 + 0.999999
-            lng *= random.uniform(0.000001, 1.000001) * 0.000002 + 0.999999
+            lat *= random.uniform(0.00001, 1.00001) * 0.00005 + 0.99999
+            lng *= random.uniform(0.00001, 1.00001) * 0.0005 + 0.9999
         self.cHandle.update({"_id": object_id},
                             {
                                 "$set": {
