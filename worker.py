@@ -47,7 +47,7 @@ def docker_worker(submissions, interval):
 
 def get_coordinates(address):
     logging.info('Retrieving coordinates for {}'.format(address))
-    geocoder = GoogleV3()
+    geocoder = GoogleV3(scheme='http')
     try:
         return geocoder.geocode(address)
     except:
