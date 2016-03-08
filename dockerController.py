@@ -69,7 +69,7 @@ class DockerController:
         except Exception, e:
             logging.error(e)
             return False
-        if r.status_code == 200 and r.text != config.container.default_message:
+        if r.status_code == 200 and r.text != config.container['default_message']:
             logging.info('{}:{}{} passed validation'.format(ip, port, path))
             return True
         else:
