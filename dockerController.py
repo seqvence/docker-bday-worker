@@ -89,7 +89,6 @@ class DockerController:
             raise ContainerError('Could not create container for image {}'.format(image_name))
 
         networks = self.cli.networks(names=['compose_default'])
-        print networks
         self.cli.connect_container_to_network(container=build_container.get('Id'), net_id=networks[0]['Id'])
         self.cli.start(container=build_container.get('Id'))
 
