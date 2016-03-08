@@ -2,6 +2,7 @@ import json
 import logging
 
 import requests
+import app_config as config
 from docker import Client, errors
 
 status = ["Downloading", "Image missing", "Configuring image",
@@ -68,7 +69,7 @@ class DockerController:
         except Exception, e:
             logging.error(e)
             return False
-        if r.status_code == 200:
+        if r.status_code == 200 and r.text != config.container.default_message:
             logging.info('{}:{}{} passed validation'.format(ip, port, path))
             return True
         else:
@@ -88,6 +89,7 @@ class DockerController:
             raise ContainerError('Could not create container for image {}'.format(image_name))
 
         networks = self.cli.networks(names=['compose_default'])
+        print networks
         self.cli.connect_container_to_network(container=build_container.get('Id'), net_id=networks[0]['Id'])
         self.cli.start(container=build_container.get('Id'))
 
@@ -130,5 +132,5 @@ def main(image_name):
 if __name__ == '__main__':
     # main("appcontainers/apache:ubuntu_14.04")
     # main("appcontainers/apache:ubuntu_14.04")
-    # main("pierrezemb/gostatic")
+    main("vstoican/results")
     pass
