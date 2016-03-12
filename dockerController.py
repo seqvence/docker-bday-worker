@@ -62,7 +62,7 @@ class DockerController:
         """
         logging.info('Testing endpoint {}:{}{}'.format(ip, port, path))
         try:
-            r = requests.get('http://{}:{}{}'.format(ip, port, path), timeout=3)
+            r = requests.get('http://{}:{}{}'.format(ip, port, path), timeout=5)
         except requests.exceptions.Timeout:
             logging.error('Timeout connecting to {}:{}{}'.format(ip, port, path))
             return False
