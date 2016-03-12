@@ -28,8 +28,7 @@ class GracefulKiller:
 
 @click.command()
 @click.option('--submissions', default=5, help='Maximum number of submissions to be processed per interval (Default: 5)')
-@click.option('--interval', default=10, help='Interval used to process new submissions Default: 10)')
-def docker_worker(submissions, interval):
+def docker_worker(submissions):
     pool = eventlet.GreenPool(size=submissions)
     killer = GracefulKiller()
     mongo = DbDriver(config)

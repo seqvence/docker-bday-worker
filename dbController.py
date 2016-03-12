@@ -152,6 +152,13 @@ class DbDriver():
         self.client.close()
         return
 
+    def no_of_submissions(self):
+        '''
+        Returns the number of submissions pending validation
+        :return:
+        '''
+        return self.cHandle.count({"status": "submitted"})
+
     def _valid_json(self, data):
         """
         Parse data and load it as JSON
