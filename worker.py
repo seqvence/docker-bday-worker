@@ -27,18 +27,21 @@ class GracefulKiller:
         self.kill_now = True
 
 @click.command()
-@click.option('--submissions', default=5, help='Number of submissions to be processed per interval (Default: 5)')
-@click.option('--interval', default=10, help='Interval used to process new submissions Default: 30)')
+@click.option('--submissions', default=5, help='Maximum number of submissions to be processed per interval (Default: 5)')
+@click.option('--interval', default=10, help='Interval used to process new submissions Default: 10)')
 def docker_worker(submissions, interval):
-    pool = eventlet.GreenPool(size=100)
+    pool = eventlet.GreenPool(size=submissions)
     killer = GracefulKiller()
+    mongo = DbDriver(config)
 
     while True:
         try:
-            for _ in xrange(submissions):
+            for _ in xrange(min(mongo.no_of_submissions(), submissions)):
                 pool.spawn(check_submission)
-            logging.info('Waiting for {} seconds'.format(interval))
-            eventlet.sleep(interval)
+            logging.info('Available threads: {}'.format(pool.free()))
+            logging.info('Running threads: {}'.format(pool.running()))
+            logging.info('Waiting for {} seconds'.format(2**(submissions-pool.running())))
+            eventlet.sleep(2**(submissions-pool.running()))
         except (SystemExit, KeyboardInterrupt):
             break
         if killer.kill_now:
