@@ -35,8 +35,14 @@ class DbDriver():
         :return: () -> None
         """
         try:
-            self.client= MongoClient(self.dbParam['hostname'],
-                        int(self.dbParam['portNo']), serverSelectionTimeoutMS=5)
+            self.client = MongoClient('mongodb://' +
+                                      self.dbParam['username'] + ':' +
+                                      self.dbParam['password'] + '@' +
+                                      self.dbParam['hostname'] + ':' +
+                                      self.dbParam['portNo'] +
+                                      '/?replicaSet=' +
+                                      self.dbParam['replicaSet']
+                                      )
             self.client.server_info()
         except Exception as e:
             logging.error(e)
@@ -177,11 +183,12 @@ class DbDriver():
 def main():
     import app_config as config2
     a = DbDriver(config2)
+    print a
     # for i in range(1):
     #     subID = a.insert_record('{"a": "a"}')
     #     logging.info(a.retrieve_record(subID))
     # print a.update_record_status(ObjectId('56ce3b9b200b7e211a45c8f3'), status="successful")
-    a.update_record_location(ObjectId('56debd3b200b7e02e70b90e0'), 1.00, 2.00)
+    #a.update_record_location(ObjectId('56debd3b200b7e02e70b90e0'), 1.00, 2.00)
     a.disconnect()
 
 if __name__ == '__main__':
