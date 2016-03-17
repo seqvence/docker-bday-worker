@@ -19,10 +19,11 @@ class DockerError(Exception):
 
 
 class DockerController:
-    def __init__(self, docker_endpoint):
+    def __init__(self, docker_endpoint, docker_network):
         if not docker_endpoint:
             raise DockerError('No docker endpoint available.')
         self.cli = Client(docker_endpoint)
+        self.network = docker_network
 
     def download_image(self, image_name):
         """
@@ -95,7 +96,10 @@ class DockerController:
         except errors.APIError:
             raise ContainerError('Could not create container for image {}'.format(image_name))
 
-        networks = self.cli.networks(names=['compose_default'])
+        networks = self.cli.networks(names=[self.network])
+        if not len(networks):
+            raise DockerError('Could not find network {}'.format(self.network))
+
         self.cli.connect_container_to_network(container=build_container.get('Id'), net_id=networks[0]['Id'])
         self.cli.start(container=build_container.get('Id'))
 
@@ -109,7 +113,7 @@ class DockerController:
             logging.error('Container {} has no network. Something went wrong'.format(image_name))
             return
 
-        return build_container.get('Id'), running_container['NetworkSettings']['Networks']['compose_default']['IPAddress']
+        return build_container.get('Id'), running_container['NetworkSettings']['Networks'][self.network]['IPAddress']
 
     def clean_container(self, container_id, image_name=None):
         """
