@@ -14,9 +14,14 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loggin
 class ContainerError(Exception):
     pass
 
+class DockerError(Exception):
+    pass
+
 
 class DockerController:
     def __init__(self, docker_endpoint):
+        if not docker_endpoint:
+            raise DockerError('No docker endpoint available.')
         self.cli = Client(docker_endpoint)
 
     def download_image(self, image_name):
@@ -43,10 +48,12 @@ class DockerController:
             # Status: Image is up to date for pierrezemb/gostatic
             # Error: Tag
             try:
+                logging.info("Image {} downloaded successfully".format(image_name))
                 logging.info(json.loads(download_log[-1])['status'])
                 return True
             except Exception, e:
-                logging.info(json.loads(download_log[-1])['error'])
+                logging.error("Failed to download image {}".format(image_name))
+                logging.error(json.loads(download_log[-1])['error'])
                 return False
         else:
             logging.info("Image {} not found.".format(image_name))
@@ -129,7 +136,5 @@ def main(image_name):
 
 
 if __name__ == '__main__':
-    # main("appcontainers/apache:ubuntu_14.04")
-    # main("appcontainers/apache:ubuntu_14.04")
     main("vstoican/results")
     pass
