@@ -1,13 +1,16 @@
 import eventlet
+from requests import ConnectionError
 
 eventlet.monkey_patch()  # NOQA
 
 import app_config as config
 from dbController import DbDriver
 from dockerController import DockerController, ContainerError
+import sys, traceback
 import logging
 import click
 import signal
+import consul
 
 from geopy.geocoders import GoogleV3
 
@@ -33,6 +36,17 @@ def docker_worker(submissions):
     killer = GracefulKiller()
     mongo = DbDriver(config)
 
+    if hasattr(config, 'consul'):
+        logging.info('Using consul for retrieving the docker endpoint')
+        config.docker = dict()
+        config.docker['api'] = None
+        eventlet.spawn_n(read_swarm_manager, config.docker, config.consul["host"], config.consul["port"],
+                         config.consul["key"])
+    elif hasattr(config, 'docker'):
+        logging.info('Using static docker endpoint from config')
+    else:
+        raise ValueError('No consul or docker configured. Please add one of the two to the config.')
+
     while True:
         try:
             for _ in xrange(min(mongo.no_of_submissions(), submissions)):
@@ -47,6 +61,18 @@ def docker_worker(submissions):
             break
 
 
+def read_swarm_manager(docker_config, consul_host, consul_port, consul_key):
+    while True:
+        try:
+            consul_client = consul.Consul(host=consul_host, port=consul_port)
+            index, data = consul_client.kv.get(consul_key)
+            docker_config['api'] = 'unix://' + data['Value']
+            logging.info('Found address {} for the swarm manager'.format(docker_config['api']))
+        except (consul.ConsulException, ConnectionError, TypeError) as e:
+            logging.error(e)
+        eventlet.sleep(15)
+
+
 def get_coordinates(address):
     logging.info('Retrieving coordinates for {}'.format(address))
     geocoder = GoogleV3(scheme='http')
@@ -55,7 +81,6 @@ def get_coordinates(address):
     except:
         logging.error('Failed to retrieve coordinates for {}'.format(address))
         return None
-
 
 
 def check_submission():
@@ -81,7 +106,13 @@ def check_submission():
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
             mongo.update_record_status(record['_id'], 'successful', statusmsg='Magic image passed validation')
             return
-        if not docker.download_image(image_name=image):
+        try:
+            image_result = docker.download_image(image_name=image)
+        except:
+            mongo.update_record_status(record['_id'], 'submitted')
+            traceback.print_exc(file=sys.stdout)
+            return
+        if not image_result:
             break
 
         logging.info('Starting container {} for user {}'.format(image, record['name']))
