@@ -5,7 +5,7 @@ eventlet.monkey_patch()  # NOQA
 
 import app_config as config
 from dbController import DbDriver
-from dockerController import DockerController, ContainerError
+from dockerController import DockerController, ContainerError, DockerError
 import sys, traceback
 import logging
 import click
@@ -66,7 +66,7 @@ def read_swarm_manager(docker_config, consul_host, consul_port, consul_key):
         try:
             consul_client = consul.Consul(host=consul_host, port=consul_port)
             index, data = consul_client.kv.get(consul_key)
-            docker_config['api'] = 'unix://' + data['Value']
+            docker_config['api'] = 'tcp://' + data['Value']
             logging.info('Found address {} for the swarm manager'.format(docker_config['api']))
         except (consul.ConsulException, ConnectionError, TypeError) as e:
             logging.error(e)
@@ -85,7 +85,7 @@ def get_coordinates(address):
 
 def check_submission():
     mongo = DbDriver(config)
-    docker = DockerController(config.docker['api'])
+    docker = DockerController(config.docker['api'], config.docker['network'])
     record = mongo.get_one_record()
 
     if not record:
@@ -121,8 +121,12 @@ def check_submission():
         except ContainerError, e:
             mongo.update_record_status(record['_id'], 'failed', statusmsg=str(e))
             return
+        except DockerError, e:
+            logging.error('Something went wrong with Docker: {}'.format(str(e)))
+            mongo.update_record_status(record['_id'], 'submitted')
+            return
 
-        eventlet.sleep(2)
+        eventlet.sleep(5)
         test_result = docker.test_endpoint(container_ip, config.container['api_port'], config.container['api_path'])
         docker.clean_container(container_id, image)
 
