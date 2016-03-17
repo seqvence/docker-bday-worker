@@ -38,7 +38,6 @@ def docker_worker(submissions):
 
     if hasattr(config, 'consul'):
         logging.info('Using consul for retrieving the docker endpoint')
-        config.docker = dict()
         config.docker['api'] = None
         eventlet.spawn_n(read_swarm_manager, config.docker, config.consul["host"], config.consul["port"],
                          config.consul["key"])
