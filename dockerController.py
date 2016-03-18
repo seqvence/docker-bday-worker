@@ -27,7 +27,7 @@ class DockerController:
         self.cli = Client(docker_endpoint)
         self.network = docker_network
         self.retries = Retry(total=5,
-                             backoff_factor=0.5,
+                             backoff_factor=1,
                              status_forcelist=[500, 502, 503, 504])
 
     def download_image(self, image_name):

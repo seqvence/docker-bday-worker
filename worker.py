@@ -125,7 +125,7 @@ def check_submission():
             mongo.update_record_status(record['_id'], 'submitted')
             return
 
-        eventlet.sleep(5)
+        #eventlet.sleep(5)
         test_result = docker.test_endpoint(container_ip, config.container['api_port'], config.container['api_path'])
         docker.clean_container(container_id, image)
 
