@@ -2,6 +2,8 @@ import json
 import logging
 
 import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 import app_config as config
 from docker import Client, errors
 
@@ -24,6 +26,9 @@ class DockerController:
             raise DockerError('No docker endpoint available.')
         self.cli = Client(docker_endpoint)
         self.network = docker_network
+        self.retries = Retry(total=5,
+                             backoff_factor=0.5,
+                             status_forcelist=[500, 502, 503, 504])
 
     def download_image(self, image_name):
         """
@@ -60,8 +65,7 @@ class DockerController:
             logging.info("Image {} not found.".format(image_name))
             return False
 
-    @staticmethod
-    def test_endpoint(ip, port, path):
+    def test_endpoint(self, ip, port, path):
         """
         Connect to an endpoint using http
         :param ip: string
@@ -69,10 +73,15 @@ class DockerController:
         :return: boolean
         """
         logging.info('Testing endpoint {}:{}{}'.format(ip, port, path))
+        s = requests.Session()
+        s.mount('http://', HTTPAdapter(max_retries=self.retries))
         try:
-            r = requests.get('http://{}:{}{}'.format(ip, port, path), timeout=5)
+            r = s.get('http://{}:{}{}'.format(ip, port, path))
         except requests.exceptions.Timeout:
             logging.error('Timeout connecting to {}:{}{}'.format(ip, port, path))
+            return False
+        except requests.exceptions.ConnectionError:
+            logging.error('Failed connecting to {}:{}{}'.format(ip, port, path))
             return False
         except Exception, e:
             logging.error(e)
