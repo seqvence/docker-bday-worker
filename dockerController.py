@@ -127,9 +127,9 @@ class DockerController:
         self.cli.stop(container=container_id, timeout=20)
         logging.info('Removing container {}'.format(image_name))
         self.cli.remove_container(container=container_id)
-        #if image_name:
-        #    logging.info("Removing image {}".format(image_name))
-        #    self.cli.remove_image(image=image_name, force=True)
+        if image_name:
+            logging.info("Removing image {}".format(image_name))
+            self.cli.remove_image(image=image_name, force=True)
         return
 
 
