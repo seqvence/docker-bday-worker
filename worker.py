@@ -92,7 +92,8 @@ def check_submission():
 
     # Filter out illegal votes
     if record['vote'].title() not in config.misc['allowed_votes']:
-        mongo.update_record_status(record['_id'], 'discarded', statusmsg="Invalid Vote record")
+        mongo.update_record_status(record['_id'], 'discarded',
+                                   statusmsg="Invalid Vote record: {}".format(record['vote']))
         return
 
     coordinates = get_coordinates(record['location'])
