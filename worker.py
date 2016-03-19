@@ -18,7 +18,6 @@ eventlet.sleep(3)
 
 logging.basicConfig(format=('%(asctime)s %(levelname)s %(message)s'), level=logging.DEBUG)
 
-
 class GracefulKiller:
     kill_now = False
 
@@ -89,6 +88,11 @@ def check_submission():
 
     if not record:
         logging.debug("Quiting. No new submission.")
+        return
+
+    # Filter out illegal votes
+    if record['vote'].title() not in config.misc['allowed_votes']:
+        mongo.update_record_status(record['_id'], 'discarded', statusmsg="Invalid Vote record")
         return
 
     coordinates = get_coordinates(record['location'])
