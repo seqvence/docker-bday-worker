@@ -26,8 +26,6 @@ class DbDriver():
         self.post = dict()
         self.twitter_link = config.twitter['tweet_link']
         self.twitter_message = urllib.quote(config.twitter['tweet_message'])
-        #self.cHandle = object
-        #self.dbHandle = object
 
     def connect(self):
         """
@@ -49,6 +47,7 @@ class DbDriver():
             sys.exit(1)
         self.dbHandle = self.client[self.dbParam['database']]
         self.cHandle = self.dbHandle[self.dbParam['collection']]
+        self.sHandle = self.dbHandle[self.dbParam['collection_stats']]
 
         return
 

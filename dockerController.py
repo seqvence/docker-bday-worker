@@ -136,10 +136,14 @@ class DockerController:
         self.cli.stop(container=container_id, timeout=20)
         logging.info('Removing container {}'.format(image_name))
         self.cli.remove_container(container=container_id)
-        if image_name:
-            logging.info("Removing image {}".format(image_name))
-            self.cli.remove_image(image=image_name, force=True)
-        return
+        try:
+            if image_name:
+                logging.info("Removing image {}".format(image_name))
+                self.cli.remove_image(image=image_name, force=True)
+            return
+        except Exception, e:
+            logging.error("Image {} was missing when trying to remove. Possible concurrency problems".format(image_name))
+            return
 
 
 def main(image_name):

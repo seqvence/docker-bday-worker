@@ -11,6 +11,7 @@ import logging
 import click
 import signal
 import consul
+import datetime
 
 from geopy.geocoders import GoogleV3
 
@@ -105,11 +106,20 @@ def check_submission():
         return
 
     for image in record['repo']:
-        logging.info("Downloading image {} for user {}".format(image, record['name']))
         if image == "bogus_bday_image:latest":
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
             mongo.update_record_status(record['_id'], 'successful', statusmsg='Magic image passed validation')
             return
+
+        # Ensure unique submissions
+        if "/" in image and mongo.sHandle.find_one({ "dockerHubUser": image.split("/")[0] }, { "_id": 1}):
+            logging.info("Duplicate submission. User already has a successful submission.")
+            mongo.update_record_status(record['_id'], 'duplicated',
+                                       statusmsg="Duplicate submission. User already has a successful submission.")
+            return
+
+        logging.info("Downloading image {} for user {}".format(image, record['name']))
+
         try:
             image_result = docker.download_image(image_name=image)
         except:
@@ -138,6 +148,12 @@ def check_submission():
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
             mongo.update_record_status(record['_id'], 'successful',
                                        statusmsg='Validation passed with image {}'.format(image))
+            # Save Docker Hub username for successful submission - avoid duplicates
+            mongo.sHandle.insert({"reference" : record['_id'],
+                                  "dockerHubUser": image.split("/")[0],
+                                  "imageName": image,
+                                  "testingTime" : str(datetime.datetime.utcnow())
+                                  })
             return
 
     logging.info('Submission FAILED for {}'.format(record['name']))
