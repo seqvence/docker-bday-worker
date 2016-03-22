@@ -105,7 +105,7 @@ def check_submission():
                                    statusmsg='Failed to geo-locate {}'.format(record['location']))
         return
 
-    for image in record['repo']:
+    for image in set(record['repo']):
         if image == "bogus_bday_image:latest":
             logging.info('Submission SUCCESSFUL for {}'.format(record['name']))
             mongo.update_record_status(record['_id'], 'successful', statusmsg='Magic image passed validation')
