@@ -145,13 +145,3 @@ class DockerController:
             logging.error("Image {} was missing when trying to remove. Possible concurrency problems".format(image_name))
             return
 
-
-def main(image_name):
-    client = DockerController("tcp://192.168.64.2:2375")
-    if client.download_image(image_name):
-        client.run_container(image_name)
-
-
-if __name__ == '__main__':
-    main("vstoican/results")
-    pass

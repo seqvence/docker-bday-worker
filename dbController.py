@@ -178,17 +178,3 @@ class DbDriver():
             return False
         return True
 
-
-def main():
-    import app_config as config2
-    a = DbDriver(config2)
-    print a
-    # for i in range(1):
-    #     subID = a.insert_record('{"a": "a"}')
-    #     logging.info(a.retrieve_record(subID))
-    # print a.update_record_status(ObjectId('56ce3b9b200b7e211a45c8f3'), status="successful")
-    #a.update_record_location(ObjectId('56debd3b200b7e02e70b90e0'), 1.00, 2.00)
-    a.disconnect()
-
-if __name__ == '__main__':
-    main()
